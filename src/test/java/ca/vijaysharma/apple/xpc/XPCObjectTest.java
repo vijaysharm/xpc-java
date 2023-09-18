@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -26,9 +28,14 @@ class XPCObjectTest {
     class xpc_null {
         @Test
         void can_read_xpc_null() throws XPCException {
-            var xpc_null_bytes = new byte[]{0x00, 0x10, 0x00, 0x00};
+            var xpc_null_bytes = new byte[]{ 0x00, 0x10, 0x00, 0x00 };
             XPCObject object = XPCObject.from(xpc_null_bytes);
             assertInstanceOf(XPCNull.class, object);
+        }
+        @Test
+        void can_write_xpc_null() throws XPCException {
+            byte[] bytes = XPCObject.bytes(new XPCNull());
+            assertArrayEquals(new byte[] { 0x00, 0x10, 0x00, 0x00 }, bytes);
         }
     }
 
@@ -70,6 +77,22 @@ class XPCObjectTest {
                     () -> XPCObject.from(xpc_bool_invalid_bytes)
             );
         }
+
+        @Test
+        void can_write_true() throws XPCException {
+            assertArrayEquals(new byte[]{
+                0x00, 0x20, 0x00, 0x00,
+                0x01, 0x00, 0x00, 0x00
+            }, XPCObject.bytes(new XPCBool(true)));
+        }
+
+        @Test
+        void can_write_false() throws XPCException {
+            assertArrayEquals(new byte[]{
+                0x00, 0x20, 0x00, 0x00,
+                0x01, 0x00, 0x00, 0x00
+            }, XPCObject.bytes(new XPCBool(true)));
+        }
     }
 
     @Nested
@@ -88,6 +111,15 @@ class XPCObjectTest {
         }
 
         @Test
+        void can_write_negative() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x30, (byte) 0x00, (byte) 0x00,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF
+            }, XPCObject.bytes(new XPCInt64(-1)));
+        }
+
+        @Test
         void can_read_positive() throws XPCException {
             var bytes = new byte[] {
                 (byte) 0x00, (byte) 0x30, (byte) 0x00, (byte) 0x00,
@@ -101,6 +133,15 @@ class XPCObjectTest {
         }
 
         @Test
+        void can_write_positive() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x30, (byte) 0x00, (byte) 0x00,
+                (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            }, XPCObject.bytes(new XPCInt64(2)));
+        }
+
+        @Test
         void can_read_zero() throws XPCException {
             var bytes = new byte[] {
                 (byte) 0x00, (byte) 0x30, (byte) 0x00, (byte) 0x00,
@@ -111,6 +152,15 @@ class XPCObjectTest {
             assertInstanceOf(XPCInt64.class, object);
             XPCInt64 int64 = (XPCInt64) object;
             assertEquals(0, int64.value());
+        }
+
+        @Test
+        void can_write_zero() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x30, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            }, XPCObject.bytes(new XPCInt64(0)));
         }
     }
 
@@ -174,6 +224,15 @@ class XPCObjectTest {
         }
 
         @Test
+        void can_write_negative() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x50, (byte) 0x00, (byte) 0x00,
+                (byte) 0xBF, (byte) 0xF3, (byte) 0x33, (byte) 0x33,
+                (byte) 0x33, (byte) 0x33, (byte) 0x33, (byte) 0x33
+            }, XPCObject.bytes(new XPCDouble(-1.2)));
+        }
+
+        @Test
         void can_read_positive() throws XPCException {
             var bytes = new byte[] {
                 (byte) 0x00, (byte) 0x50, (byte) 0x00, (byte) 0x00,
@@ -187,6 +246,15 @@ class XPCObjectTest {
         }
 
         @Test
+        void can_write_positive() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x50, (byte) 0x00, (byte) 0x00,
+                (byte) 0x40, (byte) 0xF, (byte) 0x33, (byte) 0x33,
+                (byte) 0x33, (byte) 0x33, (byte) 0x33, (byte) 0x33
+            }, XPCObject.bytes(new XPCDouble(3.9)));
+        }
+
+        @Test
         void can_read_zero() throws XPCException {
             var bytes = new byte[] {
                 (byte) 0x00, (byte) 0x50, (byte) 0x00, (byte) 0x00,
@@ -197,6 +265,15 @@ class XPCObjectTest {
             assertInstanceOf(XPCDouble.class, object);
             XPCDouble doubleValue = (XPCDouble) object;
             assertEquals(0, doubleValue.value());
+        }
+
+        @Test
+        void can_write_zero() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x50, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            }, XPCObject.bytes(new XPCDouble(0)));
         }
     }
 
@@ -217,6 +294,16 @@ class XPCObjectTest {
             XPCDate date = (XPCDate) object;
             assertEquals(instant, date.value());
         }
+
+        @Test
+        void can_write_date() throws XPCException {
+            var instant = Instant.ofEpochMilli(TimeUnit.SECONDS.toMillis(1694969145));
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x70, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0xFA, (byte) 0xF8, (byte) 0x00,
+                (byte) 0x75, (byte) 0xBD, (byte) 0x85, (byte) 0x17,
+            }, XPCObject.bytes(new XPCDate(instant)));
+        }
     }
 
     @Nested
@@ -233,6 +320,15 @@ class XPCObjectTest {
             assertInstanceOf(XPCData.class, object);
             XPCData data = (XPCData) object;
             assertArrayEquals(new byte[] { (byte) 0x23, (byte) 0x32 }, data.value());
+        }
+
+        @Test
+        void can_write_data() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x80, (byte) 0x00, (byte) 0x00,
+                (byte) 0x02, (byte) 0x00, (byte) 0x0, (byte) 0x00,
+                (byte) 0x23, (byte) 0x32, (byte) 0x0, (byte) 0x00,
+            }, XPCObject.bytes(new XPCData(new byte[] { (byte) 0x23, (byte) 0x32 })));
         }
     }
 
@@ -251,6 +347,16 @@ class XPCObjectTest {
             assertInstanceOf(XPCString.class, object);
             XPCString string = (XPCString) object;
             assertEquals("hello", string.value());
+        }
+
+        @Test
+        void can_write_string() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0x90, (byte) 0x00, (byte) 0x00,
+                (byte) 0x06, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x68, (byte) 0x65, (byte) 0x6C, (byte) 0x6C,
+                (byte) 0x6F, (byte) 0x00, (byte) 0x00, (byte) 0x00
+            }, XPCObject.bytes(new XPCString("hello")));
         }
     }
 
@@ -271,6 +377,17 @@ class XPCObjectTest {
             XPCUUID uuid = (XPCUUID) object;
             assertEquals(UUID.fromString("bd9c7f32-8010-4cfe-97c0-82371e3276fa"), uuid.value());
         }
+
+        @Test
+        void can_write_uuid() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0xA0, (byte) 0x00, (byte) 0x00,
+                (byte) 0xBD, (byte) 0x9C, (byte) 0x7F, (byte) 0x32,
+                (byte) 0x80, (byte) 0x10, (byte) 0x4C, (byte) 0xFE,
+                (byte) 0x97, (byte) 0xC0, (byte) 0x82, (byte) 0x37,
+                (byte) 0x1E, (byte) 0x32, (byte) 0x76, (byte) 0xFA,
+            }, XPCObject.bytes(new XPCUUID(UUID.fromString("bd9c7f32-8010-4cfe-97c0-82371e3276fa"))));
+        }
     }
 
     @Nested
@@ -286,7 +403,7 @@ class XPCObjectTest {
                 (byte) 0x68, (byte) 0x65, (byte) 0x6C, (byte) 0x6C,
                 (byte) 0x6F, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x90, (byte) 0x00, (byte) 0x00,
-                (byte) 0x05, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x06, (byte) 0x00, (byte) 0x00, (byte) 0x00,
                 (byte) 0x77, (byte) 0x6F, (byte) 0x72, (byte) 0x6C,
                 (byte) 0x64, (byte) 0x00, (byte) 0x00, (byte) 0x00
             };
@@ -303,6 +420,28 @@ class XPCObjectTest {
             assertInstanceOf(XPCString.class, array.value().get(1));
             var item1 = (XPCString)array.value().get(1);
             assertEquals("world", item1.value());
+        }
+
+        @Test
+        void can_write_array() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0xe0, (byte) 0x00, (byte) 0x00,
+                (byte) 0x24, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x90, (byte) 0x00, (byte) 0x00,
+                (byte) 0x06, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x68, (byte) 0x65, (byte) 0x6C, (byte) 0x6C,
+                (byte) 0x6F, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x90, (byte) 0x00, (byte) 0x00,
+                (byte) 0x06, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x77, (byte) 0x6F, (byte) 0x72, (byte) 0x6C,
+                (byte) 0x64, (byte) 0x00, (byte) 0x00, (byte) 0x00
+            }, XPCObject.bytes(new XPCArray(
+                List.of(
+                    new XPCString("hello"),
+                    new XPCString("world")
+                )
+            )));
         }
     }
     @Nested
@@ -330,6 +469,23 @@ class XPCObjectTest {
             assertInstanceOf(XPCString.class, dictionary.value().get("hello"));
             var value = (XPCString)dictionary.value().get("hello");
             assertEquals("world", value.value());
+        }
+
+        @Test
+        void can_write_dictionary() throws XPCException {
+            assertArrayEquals(new byte[]{
+                (byte) 0x00, (byte) 0xf0, (byte) 0x00, (byte) 0x00,
+                (byte) 0x1c, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x68, (byte) 0x65, (byte) 0x6C, (byte) 0x6C,
+                (byte) 0x6F, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x00, (byte) 0x90, (byte) 0x00, (byte) 0x00,
+                (byte) 0x06, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                (byte) 0x77, (byte) 0x6F, (byte) 0x72, (byte) 0x6C,
+                (byte) 0x64, (byte) 0x00, (byte) 0x00, (byte) 0x00
+            }, XPCObject.bytes(new XPCDictionary(
+                Map.of("hello", new XPCString("world"))
+            )));
         }
     }
 }

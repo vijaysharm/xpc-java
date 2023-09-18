@@ -8,9 +8,13 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static ca.vijaysharma.apple.xpc.XPCUtilities.roundUp;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public interface XPCObject {
     XPCType type();
@@ -95,7 +99,130 @@ public interface XPCObject {
         };
     }
 
-    static byte[] bytes(XPCObject object) {
-        return null;
+    static byte[] bytes(XPCObject object) throws XPCException {
+        var stream = new XPCStreamWriter();
+        put(object, stream);
+        return stream.toByteArray();
+    }
+
+    private static void put(XPCObject object, XPCStreamWriter stream) throws XPCException {
+        var type = object.type();
+        switch (type) {
+            case XPC_NULL -> {
+                stream.write(type);
+            }
+            case XPC_BOOL -> {
+                var typed = (XPCBool)object;
+                stream.write(type);
+                stream.writeInt32(typed.value() ? 1 : 0);
+            }
+            case XPC_INT64 -> {
+                var typed = (XPCInt64)object;
+                stream.write(type);
+                stream.writeInt64(typed.value());
+            }
+            case XPC_UINT64 -> {
+                var typed = (XPCUInt64)object;
+                if (typed.value() < 0) {
+                    throw new XPCInvalidValueException("XPCUInt64 cannot be negative (" + typed.value() + ")");
+                }
+                stream.write(type);
+                stream.writeInt64(typed.value());
+            }
+            case XPC_DOUBLE -> {
+                var typed = (XPCDouble)object;
+                stream.write(type);
+                stream.writeDouble(typed.value());
+            }
+            case XPC_DATE -> {
+                var typed = (XPCDate)object;
+                var seconds = typed.value().getEpochSecond();
+                var nano = TimeUnit.SECONDS.toNanos(seconds);
+                stream.write(type);
+                stream.writeInt64(nano);
+            }
+            case XPC_DATA -> {
+                var typed = (XPCData)object;
+                var data = typed.value();
+                var buf = alignedData(data, data.length);
+                stream.write(type);
+                stream.writeInt32(data.length);
+                stream.writeBytes(buf.array());
+            }
+            case XPC_STRING -> {
+                var typed = (XPCString)object;
+                var string = typed.value();
+                int length = string.length();
+                var buf = alignedData(string.getBytes(UTF_8), length + 1);
+                stream.write(type);
+                stream.writeInt32(length + 1);
+                stream.writeBytes(buf.array());
+            }
+            case XPC_UUID -> {
+                var typed = (XPCUUID)object;
+                var uuid = typed.value();
+                var buf = ByteBuffer.allocate(16)
+                    .order(ByteOrder.BIG_ENDIAN)
+                    .putLong(uuid.getMostSignificantBits())
+                    .putLong(uuid.getLeastSignificantBits());
+                stream.write(type);
+                stream.writeBytes(buf.array());
+            }
+            case XPC_ARRAY -> {
+                var typed = (XPCArray)object;
+                var values = typed.value();
+                var byteArrays = new ArrayList<byte[]>();
+                for (var item : values) {
+                    var itemBuffer = new XPCStreamWriter();
+                    put(item, itemBuffer);
+                    byteArrays.add(itemBuffer.toByteArray());
+                }
+                var entries = new XPCStreamWriter();
+                entries.writeInt32(byteArrays.size());
+                for (var bytes : byteArrays) {
+                    entries.writeBytes(bytes);
+                }
+                var entriesArray = entries.toByteArray();
+
+                stream.write(type);
+                stream.writeInt32(entriesArray.length);
+                stream.writeBytes(entriesArray);
+            }
+            case XPC_DICTIONARY -> {
+                var typed = (XPCDictionary)object;
+                var map = typed.value();
+                var entries = new XPCStreamWriter();
+                for (var entry : map.entrySet()) {
+                    var key = entry.getKey();
+                    var buf = alignedData(key.getBytes(UTF_8), key.length() + 1);
+
+                    var valueBuffer = new XPCStreamWriter();
+                    put(entry.getValue(), valueBuffer);
+                    entries.writeBytes(buf.array());
+                    entries.writeBytes(valueBuffer.toByteArray());
+                }
+
+                var dictionaryWriter = new XPCStreamWriter();
+                dictionaryWriter.writeInt32(map.size());
+                dictionaryWriter.writeBytes(entries.toByteArray());
+
+                var dictionaryByteArray = dictionaryWriter.toByteArray();
+
+                stream.write(type);
+                stream.writeInt32(dictionaryByteArray.length);
+                stream.writeBytes(dictionaryByteArray);
+            }
+            default -> throw new XPCUnimplementedException(type.name());
+        }
+    }
+
+    private static ByteBuffer alignedData(byte[] data, int length) {
+        var alignedLength = roundUp(length, 4);
+        var zeros = new byte[alignedLength - data.length];
+        Arrays.fill(zeros, (byte) 0x00);
+        return ByteBuffer.allocate(alignedLength)
+                .order(ByteOrder.LITTLE_ENDIAN)
+                .put(data)
+                .put(zeros);
     }
 }
