@@ -19,8 +19,8 @@ class XPCObjectTest {
     void throws_on_invalid_type() {
         var xpc_invalid_type_bytes = new byte[]{0x10, 0x01, 0x00, 0x00};
         assertThrowsExactly(
-                XPCInvalidTypeException.class,
-                () -> XPCObject.from(xpc_invalid_type_bytes)
+            XPCInvalidTypeException.class,
+            () -> XPCObject.from(xpc_invalid_type_bytes)
         );
     }
 
@@ -73,8 +73,8 @@ class XPCObjectTest {
             };
 
             assertThrowsExactly(
-                    XPCInvalidValueException.class,
-                    () -> XPCObject.from(xpc_bool_invalid_bytes)
+                XPCInvalidValueException.class,
+                () -> XPCObject.from(xpc_bool_invalid_bytes)
             );
         }
 

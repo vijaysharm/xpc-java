@@ -24,7 +24,6 @@ public interface XPCObject {
         return from(reader);
     }
     private static XPCObject from(XPCStreamReader reader) throws XPCException {
-
         XPCType type = reader.readType();
         return switch (type) {
             case XPC_NULL -> new XPCNull();
