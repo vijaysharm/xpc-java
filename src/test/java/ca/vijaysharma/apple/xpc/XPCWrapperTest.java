@@ -4,7 +4,6 @@ import ca.vijaysharma.apple.xpc.exceptions.XPCException;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-import java.util.Set;
 
 import static ca.vijaysharma.apple.xpc.XPCType.XPC_DICTIONARY;
 import static ca.vijaysharma.apple.xpc.XPCWrapper.XPCFlags.ALWAYS_SET;
